@@ -1,173 +1,163 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 
 export default function Dashboard() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
+  const eventId = searchParams.get('eventId'); // will be set for editing
+  const isEdit = Boolean(eventId);
+
+  const [loadingAuth, setLoadingAuth] = useState(true);
   const [imagePreview, setImagePreview] = useState(null);
 
   const {
     register,
     handleSubmit,
+    setValue,
     watch,
     reset,
     formState: { errors },
   } = useForm();
 
+  // Auth check
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/login');
-      return;
-    }
+    if (!token) return router.push('/login');
 
     fetch('/api/check-auth', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error();
-        return res.json();
-      })
-      .then(() => setLoading(false))
-      .catch(() => {
-        localStorage.removeItem('token');
-        router.push('/login');
-      });
+      headers: { Authorization: `Bearer ${token}` }
+    }).then(res => {
+      if (!res.ok) throw new Error();
+      setLoadingAuth(false);
+    }).catch(() => {
+      localStorage.removeItem('token');
+      router.push('/login');
+    });
   }, []);
 
-  const onSubmit = (data) => {
-    console.log('Event Data:', data);
-    // Handle form submission here
-  };
+  // Fetch existing event for edit
+  useEffect(() => {
+    if (!isEdit) return;
 
-  const handleImageChange = (e) => {
+    fetch(`/api/events/${eventId}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        ['eventName','eventDescription','eventDate','eventTime','performerName','numberOfPasses','passPrice','eventVenue']
+          .forEach(k => setValue(k, data[k]));
+        if (data.performerImageUrl) {
+          setImagePreview(data.performerImageUrl);
+        }
+      })
+      .catch(console.error);
+  }, [eventId, isEdit, setValue]);
+
+  const handleImageChange = e => {
     const file = e.target.files[0];
     if (file) {
-      const imageUrl = URL.createObjectURL(file);
-      setImagePreview(imageUrl);
+      setImagePreview(URL.createObjectURL(file));
     }
   };
 
-  if (loading) return <p>Checking authentication...</p>;
+  const onSubmit = async formData => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('Not authorized');
+
+      const payload = new FormData();
+      Object.entries(formData).forEach(([k, v]) => {
+        if (k === 'performerImage') {
+          if (v[0]) payload.append(k, v[0]);
+        } else {
+          payload.append(k, v);
+        }
+      });
+
+      const url = isEdit ? `/api/events/update/${eventId}` : '/api/events/create';
+      const method = isEdit ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { Authorization: `Bearer ${token}` },
+        body: payload
+      });
+
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+      alert(`Event ${isEdit ? 'updated' : 'created'} successfully!`);
+      router.push('/dashboard');
+    } catch (err) {
+      console.error(err);
+      alert(err.message);
+    }
+  };
+
+  if (loadingAuth) return <p>Checking authentication...</p>;
 
   return (
     <div className="container">
       <div className="form-header">
         <h1 className="form-title">
-          <span>✨</span> Create New Event
+          <span>✨</span> {isEdit ? 'Edit Event' : 'Create New Event'}
         </h1>
         <p className="form-subtitle">
-          Fill in the details to create an amazing event experience
+          {isEdit ? 'Make changes & save' : 'Fill in the details to create an amazing event experience'}
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="form-body">
         <div className="form-grid">
-          {/* Event Name */}
-          <div className="form-group full-width">
-            <label className="form-label">🎪 Event Name</label>
-            <input
-              type="text"
-              className="form-input"
-              {...register('eventName', { required: true })}
-              placeholder="Enter event name"
-            />
-            {errors.eventName && <p className="text-red-500">Event name is required</p>}
-          </div>
-
-          {/* Event Description */}
-          <div className="form-group full-width">
-            <label className="form-label">📝 Event Description</label>
-            <textarea
-              className="form-textarea"
-              {...register('eventDescription', { required: true, maxLength: 1000 })}
-              placeholder="Describe your event"
-            />
-            <div className="char-counter">
-              {watch('eventDescription')?.length || 0}/1000 characters
+          {/* fields */}
+          {[
+            { name: 'eventName', label: '🎪 Event Name', type: 'text', rules: { required: true } },
+            { name: 'eventDescription', label: '📝 Event Description', type: 'textarea', rules: { required: true, maxLength: 1000 } },
+            { name: 'eventDate', label: '📅 Event Date', type: 'date', rules: { required: true } },
+            { name: 'eventTime', label: '⏰ Event Time', type: 'time', rules: { required: true } },
+            { name: 'performerName', label: '🎤 Performer Name', type: 'text', rules: { required: true } },
+            { name: 'numberOfPasses', label: '🎫 Number of Passes', type: 'number', rules: { required: true, min: 1 } },
+            { name: 'passPrice', label: '💰 Price per Pass', type: 'number', step: 0.01, rules: { required: true, min: 0 } },
+            { name: 'eventVenue', label: '📍 Venue/Location', type: 'text', rules: { required: true } },
+          ].map(field => (
+            <div key={field.name} className="form-group full-width">
+              <label className="form-label">{field.label}</label>
+              {field.type !== 'textarea' ? (
+                <input
+                  type={field.type}
+                  step={field.step}
+                  className="form-input"
+                  {...register(field.name, field.rules)}
+                  placeholder={`Enter ${field.label.split(' ').slice(1).join(' ')}`}
+                />
+              ) : (
+                <textarea
+                  className="form-textarea"
+                  {...register(field.name, field.rules)}
+                  placeholder="Describe your event"
+                />
+              )}
+              {errors[field.name] && <p className="text-red-500">{field.label} is required</p>}
+              {field.name === 'eventDescription' && !errors.eventDescription && (
+                <div className="char-counter">
+                  {watch('eventDescription')?.length || 0}/1000 characters
+                </div>
+              )}
             </div>
-            {errors.eventDescription && (
-              <p className="text-red-500">Event description is required</p>
-            )}
-          </div>
+          ))}
 
-          {/* Date and Time */}
-          <div className="form-group">
-            <label className="form-label">📅 Event Date</label>
-            <input type="date" className="form-input" {...register('eventDate', { required: true })} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">⏰ Event Time</label>
-            <input type="time" className="form-input" {...register('eventTime', { required: true })} />
-          </div>
-
-          {/* Performer Name */}
-          <div className="form-group">
-            <label className="form-label">🎤 Performer Name</label>
-            <input
-              type="text"
-              className="form-input"
-              {...register('performerName', { required: true })}
-              placeholder="Enter performer/artist name"
-            />
-          </div>
-
-          {/* Number of Passes */}
-          <div className="form-group">
-            <label className="form-label">🎫 Number of Passes</label>
-            <input
-              type="number"
-              className="form-input"
-              {...register('numberOfPasses', { required: true, min: 1 })}
-              placeholder="Enter total passes"
-            />
-          </div>
-
-          {/* Price per Pass */}
-          <div className="form-group">
-            <label className="form-label">💰 Price per Pass</label>
-            <div className="price-input-group">
-              <span className="currency-symbol">₹</span>
-              <input
-                type="number"
-                step="0.01"
-                className="form-input price-input"
-                {...register('passPrice', { required: true, min: 0 })}
-                placeholder="0.00"
-              />
-            </div>
-          </div>
-
-          {/* Venue/Location */}
-          <div className="form-group">
-            <label className="form-label">📍 Venue/Location</label>
-            <input
-              type="text"
-              className="form-input"
-              {...register('eventVenue', { required: true })}
-              placeholder="Enter venue"
-            />
-          </div>
-
-          {/* Performer Image */}
+          {/* Image upload */}
           <div className="form-group full-width">
             <label className="form-label">🖼️ Performer Image</label>
             <div className="file-upload-area">
               <span className="upload-icon">📸</span>
               <div className="upload-text">Click to upload or drag & drop</div>
               <div className="upload-subtext">PNG, JPG, GIF up to 5MB</div>
-              {imagePreview && (
-                <img src={imagePreview} className="image-preview" style={{ display: 'block' }} />
-              )}
+              {imagePreview && <img src={imagePreview} className="image-preview" style={{ display: 'block' }} />}
             </div>
             <input
               type="file"
-              className="file-input"
               accept="image/*"
               {...register('performerImage')}
               onChange={handleImageChange}
@@ -176,29 +166,18 @@ export default function Dashboard() {
         </div>
 
         <div className="form-note">
-          💡 <strong>Pro Tip:</strong> High-quality images help attract more attendees!
+          💡 <strong>Pro Tip:</strong> High‑quality images help attract more attendees!
         </div>
 
         <div className="form-actions">
           <button type="button" className="btn btn-secondary w-full" onClick={() => reset()}>
             🔄 Reset Form
           </button>
-          <button type="submit" className="btn btn-primary w-full h-full bg-primary">
-            🚀 Create Event
+          <button type="submit" className="btn btn-primary w-full">
+            {isEdit ? 'Save Changes' : '🚀 Create Event'}
           </button>
         </div>
       </form>
-
-      {/* Success Animation (Optional) */}
-      <div className="success-animation" id="successAnimation">
-        <div className="success-content">
-          <div className="success-icon">🎉</div>
-          <h2 className="success-title">Event Created Successfully!</h2>
-          <p className="success-message">
-            Your event has been created and is ready to go live.
-          </p>
-        </div>
-      </div>
     </div>
   );
 }

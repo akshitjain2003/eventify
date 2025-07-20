@@ -74,27 +74,27 @@ const Page = () => {
     };
 
     // Form submission handlers
-    const onUserLogin = async(data) => {
-       
+    const onUserLogin = async (data) => {
+
         const response = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 email: data.email,
                 password: data.password,
-                accountType: 'user' 
+                accountType: 'user'
             }),
         });
         const res = await response.json();
         console.log(res);
-         if (response.ok) {
-      localStorage.setItem('token', res.token); 
-      localStorage.setItem('user',JSON.stringify( res.user)); 
-     
-      router.push('/'); 
-    } else {
-      alert(data.error || 'Login failed');
-    }
+        if (response.ok) {
+            localStorage.setItem('token', res.token);
+            localStorage.setItem('user', JSON.stringify(res.user));
+
+            router.push('/');
+        } else {
+            alert(data.error || 'Login failed');
+        }
     };
 
     const onUserSignup = async (data) => {
@@ -113,23 +113,24 @@ const Page = () => {
     };
 
     const onVenueLogin = async (data) => {
-         const response = await fetch('/api/auth/login', {
+        const response = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 email: data.email,
                 password: data.password,
-                accountType: 'venue' 
+                accountType: 'venue'
             }),
         });
         const res = await response.json();
         if (response.ok) {
-      localStorage.setItem('token', res.token); 
-      
-      router.push('/dashboard'); 
-    } else {
-      alert(data.error || 'Login failed');
-    }
+            localStorage.setItem('token', res.token);
+            localStorage.setItem('venue', JSON.stringify(res.venue));
+
+            router.push('/dashboard');
+        } else {
+            alert(data.error || 'Login failed');
+        }
 
     };
 
