@@ -29,6 +29,14 @@ const eventSchema = new mongoose.Schema({
     min: 1,
     max: 10000,
   },
+  totalPasses: {
+    type: Number,
+    required: true,
+    min: 1,
+    max: 10000,
+    immutable: true, // This prevents totalPasses from being modified
+    default: function() { return this.numberOfPasses; }
+  },
   passPrice: {
     type: Number,
     required: true,

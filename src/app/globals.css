@@ -26,11 +26,13 @@
 
 
 .topbar {
-  background: rgba(255, 255, 255);
+  background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   padding: 5px 10px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 30;
 }
 
 .logo-container {
@@ -80,22 +82,24 @@
 }
 
 .main-content {
-  flex: 1;
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 85px);
   padding: 20px;
+  position: relative;
+  z-index: 20;
 }
 
 .login-container {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   border-radius: 20px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   padding: 40px;
   width: 100%;
   max-width: 450px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   position: relative;
   overflow: hidden;
 }
@@ -821,9 +825,60 @@
   color: #666;
 }
 
+/* Custom time input styling */
+.form-input[type="time"] {
+  position: relative;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+  border: 2px solid rgba(102, 126, 234, 0.2);
+  color: #333;
+  font-weight: 600;
+  cursor: pointer;
+}
 
+.form-input[type="time"]::-webkit-calendar-picker-indicator {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 50%;
+  padding: 8px;
+  cursor: pointer;
+  filter: invert(1);
+  transition: all 0.3s ease;
+}
 
+.form-input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
 
+.form-input[type="time"]:focus::-webkit-calendar-picker-indicator {
+  filter: invert(0);
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+/* Firefox time input styling */
+.form-input[type="time"]::-moz-focus-inner {
+  border: 0;
+}
+
+/* Custom clock icon overlay */
+.time-input-wrapper {
+  position: relative;
+}
+
+.time-input-wrapper::before {
+  content: "🕐";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.2rem;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+
+.form-input[type="time"]:focus + .time-input-wrapper::before {
+  opacity: 1;
+}
 
 /* Topbar Styles */
 .topbar {
@@ -1237,3 +1292,170 @@
     transform: translateY(0);
   }
 }
+
+/* Android Clock Picker Styles */
+.android-clock-picker {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  width: 300px;
+}
+
+.clock-header {
+  text-align: center;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.time-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.time-part {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 2rem;
+  font-weight: bold;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.time-part.active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.time-separator {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.clock-face {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+  cursor: pointer;
+}
+
+.clock-number {
+  user-select: none;
+  cursor: pointer;
+}
+
+.clock-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.clock-btn {
+  background: transparent;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.clock-btn.cancel {
+  color: #666;
+}
+
+.clock-btn.ok {
+  color: #667eea;
+}
+
+.clock-btn:hover {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.clock-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.clock-modal {
+  animation: fadeIn 0.3s ease;
+}
+
+.android-time-input input {
+  cursor: pointer;
+}
+
+/* Remove all video debugging styles */
+
+.message {
+  margin-top: 20px;
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.message.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.message.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.period-selector {
+  display: flex;
+  flex-direction: column;
+  margin-left: 15px;
+  gap: 5px;
+}
+
+.period-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  font-size: 0.9rem;
+  font-weight: bold;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 40px;
+  text-align: center;
+}
+
+.period-btn.active {
+  background: rgba(255, 255, 255, 0.4);
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.period-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+
+

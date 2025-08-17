@@ -46,6 +46,7 @@ export async function POST(req) {
       eventTime,
       performerName,
       numberOfPasses,
+      totalPasses: numberOfPasses, // Store original count
       passPrice,
       eventVenue,
       performerImageUrl: imagePath,
