@@ -1,9 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
-import Event from '@/models/event'; // your Mongoose Event model
+import Event from '@/models/event'; 
 import { connectDB } from '@/lib/mongodb';
+import cloudinary from '@/lib/cloudinary';
 
 export async function POST(req) {
   await connectDB();
@@ -12,7 +11,7 @@ export async function POST(req) {
   if (!token) return NextResponse.json({ error: 'No token provided' }, { status: 401 });
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Make sure to set this secret in .env
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const formData = await req.formData();
     const eventName = formData.get('eventName');
@@ -25,20 +24,23 @@ export async function POST(req) {
     const eventVenue = formData.get('eventVenue');
     const imageFile = formData.get('performerImage');
 
-    const dir = path.join(process.cwd(), 'public', 'uploads', 'Events', eventName);
-    await mkdir(dir, { recursive: true });
+    let imageUrl = '';
 
-    let imagePath = '';
-    console.log(imageFile)
-    if (imageFile && typeof(imageFile.name) === 'string') {
+    if (imageFile && typeof imageFile.name === 'string') {
       const fileBytes = await imageFile.arrayBuffer();
       const buffer = Buffer.from(fileBytes);
-      const fileName = Date.now() + '-' + imageFile.name.replace(/\s+/g, '_');
-      imagePath = `/uploads/Events/${eventName}/${fileName}`;
-      await writeFile(path.join(dir, fileName), buffer);
+
+      // Convert buffer to base64 for Cloudinary
+      const base64Image = `data:${imageFile.type};base64,${buffer.toString('base64')}`;
+
+      const uploadRes = await cloudinary.uploader.upload(base64Image, {
+        folder: `Events/${eventName}`, // optional folder structure
+        public_id: Date.now().toString(),
+      });
+
+      imageUrl = uploadRes.secure_url; // ✅ Cloudinary hosted image
     }
-    console.log(imagePath)
-    console.log(imageFile)
+
     const newEvent = new Event({
       eventName,
       eventDescription,
@@ -46,16 +48,16 @@ export async function POST(req) {
       eventTime,
       performerName,
       numberOfPasses,
-      totalPasses: numberOfPasses, // Store original count
+      totalPasses: numberOfPasses,
       passPrice,
       eventVenue,
-      performerImageUrl: imagePath,
-      createdBy: decoded.venueId, // ✅ Pulling from token
+      performerImageUrl: imageUrl,
+      createdBy: decoded.venueId,
     });
 
     await newEvent.save();
 
-    return NextResponse.json({ message: 'Event created' });
+    return NextResponse.json({ message: 'Event created successfully!' });
   } catch (err) {
     console.error('Event creation error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
