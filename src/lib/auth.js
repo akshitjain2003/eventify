@@ -1,8 +1,8 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-// import GoogleProvider from "next-auth/providers/google";
+import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcrypt";
-import connectDB from "./mongodb";
+import { connectDB } from "./mongodb";
 import User from "../models/user";
 
 export const authOptions = {
