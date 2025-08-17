@@ -4,6 +4,7 @@ import Event from '@/models/event';
 import { connectDB } from '@/lib/mongodb';
 import cloudinary from '@/lib/cloudinary';
 
+
 export async function POST(req) {
   await connectDB();
 

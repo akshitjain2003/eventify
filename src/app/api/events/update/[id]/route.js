@@ -1,9 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
 import Event from '@/models/event';
 import { connectDB } from '@/lib/mongodb';
+import cloudinary from '@/lib/cloudinary';
 
 export async function PUT(req, { params }) {
   await connectDB();
@@ -16,7 +15,6 @@ export async function PUT(req, { params }) {
     const formData = await req.formData();
 
     const eventId = params.id;
-    console.log(eventId)
     const existingEvent = await Event.findById(eventId);
     if (!existingEvent) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
@@ -37,20 +35,44 @@ export async function PUT(req, { params }) {
     const eventVenue = formData.get('eventVenue') || existingEvent.eventVenue;
     const imageFile = formData.get('performerImage');
 
-    let imagePath = existingEvent.performerImageUrl;
+    let imageUrl = existingEvent.performerImageUrl;
 
+    // ✅ Upload new image to Cloudinary if provided
     if (imageFile && typeof imageFile.name === 'string') {
-      const dir = path.join(process.cwd(), 'public', 'uploads', 'Events', eventName);
-      await mkdir(dir, { recursive: true });
+      const buffer = Buffer.from(await imageFile.arrayBuffer());
 
-      const fileBytes = await imageFile.arrayBuffer();
-      const buffer = Buffer.from(fileBytes);
-      const fileName = Date.now() + '-' + imageFile.name.replace(/\s+/g, '_');
-      imagePath = `/uploads/Events/${eventName}/${fileName}`;
-      await writeFile(path.join(dir, fileName), buffer);
+      const uploadFromBuffer = (buffer) => {
+        return new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: `Events/${eventName}` },
+            (error, result) => {
+              if (result) resolve(result);
+              else reject(error);
+            }
+          );
+          stream.end(buffer);
+        });
+      };
+
+      const uploadRes = await uploadFromBuffer(buffer);
+      imageUrl = uploadRes.secure_url;
+
+      // ✅ Optional: delete old image from Cloudinary (if exists)
+      if (existingEvent.performerImageUrl) {
+        try {
+          const publicId = existingEvent.performerImageUrl
+            .split('/')
+            .slice(-2)
+            .join('/')
+            .split('.')[0]; // Extract Cloudinary public_id
+          await cloudinary.uploader.destroy(publicId);
+        } catch (err) {
+          console.warn('Failed to delete old image:', err.message);
+        }
+      }
     }
 
-    // Update event fields
+    // ✅ Update event fields
     existingEvent.eventName = eventName;
     existingEvent.eventDescription = eventDescription;
     existingEvent.eventDate = eventDate;
@@ -59,7 +81,7 @@ export async function PUT(req, { params }) {
     existingEvent.numberOfPasses = numberOfPasses;
     existingEvent.passPrice = passPrice;
     existingEvent.eventVenue = eventVenue;
-    existingEvent.performerImageUrl = imagePath;
+    existingEvent.performerImageUrl = imageUrl;
 
     await existingEvent.save();
 
