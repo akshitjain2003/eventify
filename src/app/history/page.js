@@ -80,7 +80,7 @@ export default function HistoryPage() {
   return (
     <div className="min-h-screen flex justify-center items-center flex-col w-full bg-gray-50">
       {/* Top Bar */}
-      <div className="bg-white w-full shadow-sm border-b">
+      <div className="bg-white h-18 w-full shadow-sm">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
